@@ -2,13 +2,16 @@ import discord
 from discord.ext import commands
 from openai import OpenAI
 import os
-from aiohttp import web
-import asyncio
+from keep_alive import keep_alive
+from dotenv import load_dotenv
 
+load_dotenv()
 # Получение конфигурации из переменных окружения
 OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
 DISCORD_BOT_TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 MODEL = os.getenv('MODEL', 'x-ai/grok-4.1-fast')  # По умолчанию grok-4.1-fast
+
+keep_alive()
 
 # ID канала для автоответа (опционально)
 auto_channel_id_str = os.getenv('AUTO_RESPOND_CHANNEL_ID')
@@ -192,37 +195,10 @@ async def on_message(message):
     # Важно: обработать команды после проверки сообщений
     await bot.process_commands(message)
 
-# Веб-сервер для health checks (требуется для render.com)
-async def health_check(request):
-    """Простой health check endpoint"""
-    return web.Response(text="OK", status=200)
-
-async def start_web_server():
-    """Запуск веб-сервера для health checks"""
-    app = web.Application()
-    app.router.add_get('/', health_check)
-    app.router.add_get('/health', health_check)
-    
-    # Получить порт из переменной окружения (render.com устанавливает PORT)
-    port = int(os.getenv('PORT', 10000))
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, '0.0.0.0', port)
-    await site.start()
-    print(f'Веб-сервер запущен на порту {port}')
-
-# Запуск бота и веб-сервера
-async def main():
-    """Основная функция для запуска бота и веб-сервера"""
-    # Запустить веб-сервер в фоне
-    await start_web_server()
-    
-    # Запустить Discord бота
-    await bot.start(DISCORD_BOT_TOKEN)
-
+# Запуск бота
 if __name__ == "__main__":
     try:
-        asyncio.run(main())
+        bot.run(DISCORD_BOT_TOKEN)
     except KeyboardInterrupt:
         print("Бот остановлен пользователем")
     except Exception as e:
